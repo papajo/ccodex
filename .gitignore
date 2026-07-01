@@ -1,0 +1,42 @@
+cat > .gitignore <<'EOF'
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Local env/config
+.env
+.env.*
+.DS_Store
+
+# Logs
+*.log
+
+# Local model folders
+models/
+Ornith*/
+huggingface:*/
+mlx-community/
+
+# Model weight files
+*.safetensors
+*.gguf
+*.bin
+*.pt
+*.pth
+*.onnx
+*.npz
+*.msgpack
+EOF
