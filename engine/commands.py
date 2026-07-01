@@ -13,6 +13,7 @@ ccodex commands
 /help       Show this help message
 /models     List models from the API server
 /prompt     Show the active system prompt
+/config     Show loaded configuration
 /clear      Clear conversation history
 /history    Show current conversation history
 /stats      Show local runtime stats
@@ -99,10 +100,29 @@ def handle_command(
         {prompt}
         """.strip()
 
-    return CommandResult(
-        handled=True,
-        output=output,
-    )
+        return CommandResult(
+            handled=True,
+            output=output,
+        )
+        
+    if command == "/config":
+        output = f"""
+        Loaded configuration
+
+        Base URL:           {config.base_url}
+        Model:              {config.model}
+        API key configured: {"yes" if config.api_key.strip() else "no"}
+        Temperature:        {config.temperature}
+        Max tokens:         {config.max_tokens}
+        Timeout:            {config.timeout}
+        History limit:      {config.history_limit}
+        System prompt path: {config.system_prompt_path}
+        """.strip()
+
+        return CommandResult(
+            handled=True,
+            output=output,
+        )
             
     if command == "/clear":
         history.clear()
@@ -117,18 +137,18 @@ def handle_command(
         error_text = client.stats.last_error or "none"
 
         output = f"""
-Runtime stats
+        Runtime stats
 
-Base URL:      {config.base_url}
-Model:         {config.model}
-Temperature:   {config.temperature}
-Max tokens:    {config.max_tokens}
-History turns: {history.turns}
-Requests:      {client.stats.requests}
-Last latency:  {latency_text}
-Last chars:    {client.stats.last_chars}
-Last error:    {error_text}
-""".strip()
+        Base URL:      {config.base_url}
+        Model:         {config.model}
+        Temperature:   {config.temperature}
+        Max tokens:    {config.max_tokens}
+        History turns: {history.turns}
+        Requests:      {client.stats.requests}
+        Last latency:  {latency_text}
+        Last chars:    {client.stats.last_chars}
+        Last error:    {error_text}
+        """.strip()
 
         return CommandResult(handled=True, output=output)
 
