@@ -11,6 +11,7 @@ HELP_TEXT = """
 ccodex commands
 
 /help       Show this help message
+/models     List models from the API server
 /clear      Clear conversation history
 /history    Show current conversation history
 /stats      Show local runtime stats
@@ -47,6 +48,44 @@ def handle_command(
 
     if command == "/help":
         return CommandResult(handled=True, output=HELP_TEXT)
+
+    if command == "/models":
+        try:
+            models = client.list_models()
+        except Exception as exc:
+            return CommandResult(
+                handled=True,
+                output=f"Could not fetch models: {exc}",
+            )
+
+        if not models:
+            return CommandResult(
+                handled=True,
+                output="No models returned by the API server.",
+            )
+
+        lines = ["Available models"]
+
+        for model in models:
+            model_id = model.get("id", "<unknown>")
+            owned_by = model.get("owned_by")
+            max_len = model.get("max_model_len")
+
+            details = []
+
+            if owned_by:
+                details.append(f"owner: {owned_by}")
+
+            if max_len:
+                details.append(f"context: {max_len}")
+
+            suffix = f" ({', '.join(details)})" if details else ""
+            lines.append(f"- {model_id}{suffix}")
+
+        return CommandResult(
+            handled=True,
+            output="\n".join(lines),
+        )
 
     if command == "/clear":
         history.clear()

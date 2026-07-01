@@ -33,6 +33,19 @@ class OpenAICompatibleClient:
 
         return headers
 
+    def list_models(self) -> list[dict]:
+        url = f"{self.config.base_url}/models"
+
+        with httpx.Client(timeout=self.config.timeout) as client:
+            response = client.get(
+                url,
+                headers=self._headers(),
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        return data.get("data", [])
+            
     def stream_chat(self, messages: list[Message]) -> Iterable[str]:
         url = f"{self.config.base_url}/chat/completions"
 
