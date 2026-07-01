@@ -1,20 +1,14 @@
 from __future__ import annotations
-
+from engine.prompting import read_system_prompt
 from engine.client import OpenAICompatibleClient
 from engine.commands import handle_command
 from engine.config import Config
 from engine.history import ChatHistory
 
 
-def read_system_prompt(config: Config) -> str:
-    if not config.system_prompt_path.exists():
-        return "You are ccodex, a concise and careful coding assistant."
-
-    return config.system_prompt_path.read_text(encoding="utf-8").strip()
-
-
 def run_chat(config: Config) -> None:
     system_prompt = read_system_prompt(config)
+    
     history = ChatHistory(limit=config.history_limit)
     client = OpenAICompatibleClient(config=config)
 

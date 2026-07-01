@@ -5,13 +5,14 @@ from dataclasses import dataclass
 from engine.client import OpenAICompatibleClient
 from engine.config import Config
 from engine.history import ChatHistory
-
+from engine.prompting import read_system_prompt
 
 HELP_TEXT = """
 ccodex commands
 
 /help       Show this help message
 /models     List models from the API server
+/prompt     Show the active system prompt
 /clear      Clear conversation history
 /history    Show current conversation history
 /stats      Show local runtime stats
@@ -87,6 +88,22 @@ def handle_command(
             output="\n".join(lines),
         )
 
+    if command == "/prompt":
+        prompt = read_system_prompt(config)
+
+        output = f"""
+        Active system prompt
+
+        Path: {config.system_prompt_path}
+
+        {prompt}
+        """.strip()
+
+    return CommandResult(
+        handled=True,
+        output=output,
+    )
+            
     if command == "/clear":
         history.clear()
         return CommandResult(handled=True, output="Conversation history cleared.")
