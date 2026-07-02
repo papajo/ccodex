@@ -5,7 +5,8 @@ from dataclasses import dataclass
 from engine.client import OpenAICompatibleClient
 from engine.config import Config
 from engine.history import ChatHistory
-from engine.prompting import read_system_prompt
+from engine.prompting import build_system_prompt
+import json
 
 HELP_TEXT = """
 ccodex commands
@@ -14,6 +15,7 @@ ccodex commands
 /models     List models from the API server
 /prompt     Show the active system prompt
 /config     Show loaded configuration
+/raw        Show the last JSON request payload
 /clear      Clear conversation history
 /history    Show current conversation history
 /stats      Show local runtime stats
@@ -90,7 +92,7 @@ def handle_command(
         )
 
     if command == "/prompt":
-        prompt = read_system_prompt(config)
+        prompt = build_system_prompt(config)
 
         output = f"""
         Active system prompt
@@ -124,6 +126,25 @@ def handle_command(
             output=output,
         )
             
+
+    if command == "/raw":
+        if client.stats.last_payload is None:
+            return CommandResult(
+                handled=True,
+                output="No raw request payload yet. Send a message to the model first.",
+        )
+
+        output = json.dumps(
+            client.stats.last_payload,
+            indent=2,
+            ensure_ascii=False,
+        )
+
+        return CommandResult(
+            handled=True,
+            output=output,
+        )
+
     if command == "/clear":
         history.clear()
         return CommandResult(handled=True, output="Conversation history cleared.")
