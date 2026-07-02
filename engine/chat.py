@@ -48,6 +48,7 @@ def run_chat(config: Config) -> None:
                 intr = command.interactive
                 if intr.get("type") == "collect_multiline":
                     path = intr.get("path")
+                    dry_run = intr.get("dry_run", False)
                     lines: list[str] = []
                     print("(paste content, end with .END on its own line)")
                     while True:
@@ -104,6 +105,18 @@ def run_chat(config: Config) -> None:
                             r"-----BEGIN PRIVATE KEY-----",
                         ]
 
+                        # allow project override from .ccodex_secret_patterns.json
+                        try:
+                            cfg_file = Path.cwd() / ".ccodex_secret_patterns.json"
+                            if cfg_file.exists():
+                                import json as _json
+                                with cfg_file.open("r", encoding="utf-8") as fh:
+                                    extra = _json.load(fh)
+                                if isinstance(extra, list):
+                                    secret_patterns = extra + secret_patterns
+                        except Exception:
+                            pass
+
                         found = []
                         for pat in secret_patterns:
                             if re.search(pat, new_text):
@@ -121,6 +134,16 @@ def run_chat(config: Config) -> None:
 
                         # create parent dirs
                         target.parent.mkdir(parents=True, exist_ok=True)
+
+                        if dry_run:
+                            print("Dry-run: not writing file. Dry diff saved to .ccodex_dryrun.diff")
+                            try:
+                                with open(".ccodex_dryrun.diff", "w", encoding="utf-8") as fh:
+                                    fh.write(diff)
+                            except Exception:
+                                pass
+                            continue
+
                         # backup
                         if target.exists():
                             try:
@@ -130,8 +153,51 @@ def run_chat(config: Config) -> None:
                                 pass
 
                         try:
-                            target.write_text(new_text, encoding="utf-8")
-                            print(f"Wrote {target}")
+                            # If file changed on disk since preview, attempt three-way merge via git
+                            current_text = ""
+                            if target.exists():
+                                try:
+                                    current_text = target.read_text(encoding="utf-8")
+                                except Exception:
+                                    current_text = old_text
+
+                            if current_text != old_text and target.exists():
+                                # write new_text to a temp file and run git merge-file
+                                import tempfile, subprocess
+
+                                with tempfile.NamedTemporaryFile("w", delete=False, encoding="utf-8") as newf:
+                                    newf.write(new_text)
+                                    new_path = newf.name
+
+                                with tempfile.NamedTemporaryFile("w", delete=False, encoding="utf-8") as basef:
+                                    basef.write(old_text)
+                                    base_path = basef.name
+
+                                # current file on disk is the local
+                                local_path = str(target)
+
+                                try:
+                                    rc = subprocess.call(["git", "merge-file", local_path, base_path, new_path])
+                                    if rc == 0:
+                                        print(f"Three-way merge applied to {target}")
+                                    else:
+                                        print(f"Merge had conflicts (exit {rc}). Created .rej files if any.")
+                                except Exception:
+                                    # fallback to overwrite
+                                    target.write_text(new_text, encoding="utf-8")
+                                    print(f"Wrote {target} (fallback)")
+                                finally:
+                                    try:
+                                        Path(new_path).unlink()
+                                    except Exception:
+                                        pass
+                                    try:
+                                        Path(base_path).unlink()
+                                    except Exception:
+                                        pass
+                            else:
+                                target.write_text(new_text, encoding="utf-8")
+                                print(f"Wrote {target}")
                         except Exception as exc:
                             print(f"Failed to write file: {exc}")
                             continue
