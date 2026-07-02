@@ -42,6 +42,75 @@ def run_chat(config: Config) -> None:
         if command.handled:
             if command.output:
                 print(command.output)
+
+            # Interactive collection (multi-line) support
+            if getattr(command, "interactive", None):
+                intr = command.interactive
+                if intr.get("type") == "collect_multiline":
+                    path = intr.get("path")
+                    lines: list[str] = []
+                    print("(paste content, end with .END on its own line)")
+                    while True:
+                        try:
+                            line = input()
+                        except (EOFError, KeyboardInterrupt):
+                            print("\nAborted.")
+                            lines = []
+                            break
+
+                        if line.strip() == ".END":
+                            break
+
+                        lines.append(line)
+
+                    if not lines:
+                        # nothing collected / aborted
+                        continue
+
+                    new_text = "\n".join(lines) + "\n"
+                    from pathlib import Path
+                    import difflib
+                    target = Path(Path.cwd()) / Path(path)
+                    old_text = ""
+                    if target.exists():
+                        try:
+                            old_text = target.read_text(encoding="utf-8")
+                        except Exception:
+                            old_text = ""
+
+                    old_lines = old_text.splitlines(keepends=True)
+                    new_lines = new_text.splitlines(keepends=True)
+
+                    diff = "".join(
+                        difflib.unified_diff(old_lines, new_lines, fromfile=str(target), tofile=str(target) + " (new)")
+                    )
+
+                    if not diff:
+                        print("No changes detected.")
+                        continue
+
+                    print("--- Diff preview ---")
+                    print(diff)
+                    ans = input("Apply changes? (y/N): ").strip().lower()
+                    if ans in {"y", "yes"}:
+                        # create parent dirs
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        # backup
+                        if target.exists():
+                            try:
+                                bak = target.with_suffix(target.suffix + ".bak")
+                                bak.write_text(old_text, encoding="utf-8")
+                            except Exception:
+                                pass
+
+                        try:
+                            target.write_text(new_text, encoding="utf-8")
+                            print(f"Wrote {target}")
+                        except Exception as exc:
+                            print(f"Failed to write file: {exc}")
+                    else:
+                        print("Aborted — no changes applied.")
+
             if command.should_exit:
                 break
             continue
