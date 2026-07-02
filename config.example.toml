@@ -1,0 +1,17 @@
+# ccodex example configuration
+# Copy this file to config.toml and edit locally.
+# Do not commit config.toml if it contains secrets.
+
+base_url = "http://localhost:8001/v1"
+model = "Ornith-1.0-9B-4bit"
+
+# Leave blank if your local server does not require auth.
+# If oMLX requires an API key, put it in your local config.toml or export CCODEX_API_KEY.
+api_key = ""
+
+temperature = 0.2
+max_tokens = 2048
+timeout = 120
+history_limit = 20
+
+system_prompt = "engine/prompts/system.md"

@@ -16,6 +16,9 @@ dist/
 build/
 *.egg-info/
 
+# Local ccodex config
+config.toml
+
 # Local env/config
 .env
 .env.*

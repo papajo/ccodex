@@ -108,18 +108,22 @@ def handle_command(
         )
         
     if command == "/config":
-        output = f"""
-        Loaded configuration
-
-        Base URL:           {config.base_url}
-        Model:              {config.model}
-        API key configured: {"yes" if config.api_key.strip() else "no"}
-        Temperature:        {config.temperature}
-        Max tokens:         {config.max_tokens}
-        Timeout:            {config.timeout}
-        History limit:      {config.history_limit}
-        System prompt path: {config.system_prompt_path}
-        """.strip()
+        output = "\n".join(
+            [
+                "Loaded configuration",
+                "",
+                f"Config file:        {config.config_path}",
+                f"Config file loaded: {'yes' if config.config_loaded else 'no'}",
+                f"Base URL:           {config.base_url}",
+                f"Model:              {config.model}",
+                f"API key configured: {'yes' if config.api_key.strip() else 'no'}",
+                f"Temperature:        {config.temperature}",
+                f"Max tokens:         {config.max_tokens}",
+                f"Timeout:            {config.timeout}",
+                f"History limit:      {config.history_limit}",
+                f"System prompt path: {config.system_prompt_path}",
+            ]
+        )
 
         return CommandResult(
             handled=True,
@@ -132,7 +136,7 @@ def handle_command(
             return CommandResult(
                 handled=True,
                 output="No raw request payload yet. Send a message to the model first.",
-        )
+            )
 
         output = json.dumps(
             client.stats.last_payload,
@@ -157,20 +161,21 @@ def handle_command(
         latency_text = "n/a" if latency is None else f"{latency:.2f}s"
         error_text = client.stats.last_error or "none"
 
-        output = f"""
-        Runtime stats
-
-        Base URL:      {config.base_url}
-        Model:         {config.model}
-        Temperature:   {config.temperature}
-        Max tokens:    {config.max_tokens}
-        History turns: {history.turns}
-        Requests:      {client.stats.requests}
-        Last latency:  {latency_text}
-        Last chars:    {client.stats.last_chars}
-        Last error:    {error_text}
-        """.strip()
-
+        output = "\n".join(
+            [
+                "Runtime stats:",
+                "",
+                f"Base URL:      {config.base_url}",
+                f"Model:         {config.model}",
+                f"Temperature:   {config.temperature}",
+                f"Max tokens:    {config.max_tokens}",
+                f"History turns: {history.turns}",
+                f"Requests:      {client.stats.requests}",
+                f"Last latency:  {latency_text}",
+                f"Last chars:    {client.stats.last_chars}",
+                f"Last error:    {error_text}",
+            ]
+        ).strip()
         return CommandResult(handled=True, output=output)
 
     return CommandResult(

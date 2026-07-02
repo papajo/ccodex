@@ -18,6 +18,7 @@ class ClientStats:
     last_chars: int = 0
     last_model: str | None = None
     last_error: str | None = None
+    last_payload: dict | None = None
 
 
 @dataclass
@@ -56,6 +57,8 @@ class OpenAICompatibleClient:
             "max_tokens": self.config.max_tokens,
             "stream": True,
         }
+        
+        self.stats.last_payload = payload
 
         started = time.perf_counter()
         chars = 0
