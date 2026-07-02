@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import json
+from pathlib import Path
+from typing import Any
 
 
 Message = dict[str, str]
@@ -52,3 +55,39 @@ class ChatHistory:
     @property
     def turns(self) -> int:
         return sum(1 for msg in self.messages if msg["role"] == "user")
+
+    # Persistence helpers
+    def to_dict(self) -> dict[str, Any]:
+        return {"limit": self.limit, "messages": self.messages}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ChatHistory":
+        limit = int(data.get("limit", 20))
+        messages = data.get("messages", []) or []
+        return cls(limit=limit, messages=list(messages))
+
+    def save(self, path: Path) -> None:
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("w", encoding="utf-8") as fh:
+                json.dump(self.to_dict(), fh, ensure_ascii=False, indent=2)
+        except Exception:
+            # Best-effort save; do not raise to avoid disrupting CLI shutdown
+            return
+
+    @classmethod
+    def load(cls, path: Path, limit: int = 20) -> "ChatHistory":
+        if not path.exists():
+            return cls(limit=limit)
+
+        try:
+            with path.open("r", encoding="utf-8") as fh:
+                data = json.load(fh)
+
+            hist = cls.from_dict(data)
+            hist.limit = limit
+            hist.trim()
+            return hist
+        except Exception:
+            # If loading fails, return empty history
+            return cls(limit=limit)

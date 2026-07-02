@@ -4,12 +4,16 @@ from engine.client import OpenAICompatibleClient
 from engine.commands import handle_command
 from engine.config import Config
 from engine.history import ChatHistory
+from pathlib import Path
+import os
 
 
 def run_chat(config: Config) -> None:
     system_prompt = build_system_prompt(config)
 
-    history = ChatHistory(limit=config.history_limit)
+    # persistent history path can be configured via `CCODEX_HISTORY_PATH`
+    history_path = Path(os.getenv("CCODEX_HISTORY_PATH", ".ccodex_history.json"))
+    history = ChatHistory.load(history_path, limit=config.history_limit)
     client = OpenAICompatibleClient(config=config)
 
     print("ccodex v0.2")
@@ -67,3 +71,9 @@ def run_chat(config: Config) -> None:
 
         if assistant_text:
             history.add_assistant(assistant_text)
+
+    # Save history on exit (best-effort)
+    try:
+        history.save(history_path)
+    except Exception:
+        pass
