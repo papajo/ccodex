@@ -93,6 +93,32 @@ def run_chat(config: Config) -> None:
                     print(diff)
                     ans = input("Apply changes? (y/N): ").strip().lower()
                     if ans in {"y", "yes"}:
+                        # basic secret scanning (v0.7 safety)
+                        import re
+
+                        secret_patterns = [
+                            r"API[_-]?KEY\s*=",  # API_KEY= or API-KEY =
+                            r"SECRET[_-]?KEY",
+                            r"AKIA[0-9A-Z]{16}",
+                            r"[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]{20,}",
+                            r"-----BEGIN PRIVATE KEY-----",
+                        ]
+
+                        found = []
+                        for pat in secret_patterns:
+                            if re.search(pat, new_text):
+                                found.append(pat)
+
+                        if found:
+                            print("Warning: potential secrets detected in the provided content.")
+                            print("Matches:")
+                            for f in found:
+                                print(f"- {f}")
+                            confirm = input("Type FORCE to proceed anyway, or anything else to abort: ").strip()
+                            if confirm != "FORCE":
+                                print("Aborted due to secret detection — no changes applied.")
+                                continue
+
                         # create parent dirs
                         target.parent.mkdir(parents=True, exist_ok=True)
                         # backup
@@ -108,6 +134,25 @@ def run_chat(config: Config) -> None:
                             print(f"Wrote {target}")
                         except Exception as exc:
                             print(f"Failed to write file: {exc}")
+                            continue
+
+                        # Offer to create a git commit for the change (if in a git repo)
+                        try:
+                            import subprocess
+
+                            git_root = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True)
+                            if git_root.returncode == 0:
+                                do_commit = input("Create git commit for this change? (y/N): ").strip().lower()
+                                if do_commit in {"y", "yes"}:
+                                    try:
+                                        subprocess.check_call(["git", "add", str(target)])
+                                        msg = f"ccodex: update {target}"
+                                        subprocess.check_call(["git", "commit", "-m", msg])
+                                        print("Committed change to git.")
+                                    except Exception as exc:
+                                        print(f"Git commit failed: {exc}")
+                        except Exception:
+                            pass
                     else:
                         print("Aborted — no changes applied.")
 

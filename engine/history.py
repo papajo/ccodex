@@ -57,6 +57,51 @@ class ChatHistory:
         return sum(1 for msg in self.messages if msg["role"] == "user")
 
     # Persistence helpers
+    def to_dict(self) -> dict:
+        return {"limit": self.limit, "messages": list(self.messages)}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ChatHistory":
+        limit = int(data.get("limit", 20))
+        msgs = list(data.get("messages", []))
+        h = cls(limit=limit)
+        h.messages = msgs
+        h.trim()
+        return h
+
+    def save(self, path: str | Path) -> None:
+        import json
+        from pathlib import Path
+
+        p = Path(path)
+        try:
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(json.dumps(self.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception:
+            # non-fatal
+            return
+
+    @classmethod
+    def load(cls, path: str | Path, limit: int | None = None) -> "ChatHistory":
+        import json
+        from pathlib import Path
+
+        p = Path(path)
+        if not p.exists():
+            return cls(limit=limit or 20)
+
+        try:
+            raw = p.read_text(encoding="utf-8")
+            data = json.loads(raw)
+            hist = cls.from_dict(data)
+            if limit is not None:
+                hist.limit = limit
+                hist.trim()
+            return hist
+        except Exception:
+            return cls(limit=limit or 20)
+
+    # Persistence helpers
     def to_dict(self) -> dict[str, Any]:
         return {"limit": self.limit, "messages": self.messages}
 
